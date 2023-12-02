@@ -495,229 +495,6 @@ def visibl_oclt():
     # Load the meta-kernel.
     #
     spiceypy.furnsh( METAKR )
-
-    #
-    # Assign the inputs for our search.
-    #
-    # Since we're interested in the apparent location of the
-    # target, we use light time and stellar aberration
-    # corrections. We use the "converged Newtonian" form
-    # of the light time correction because this choice may
-    # increase the accuracy of the occultation times we'll
-    # compute using gfoclt.
-    #
-    srfpt  = 'Earth'
-    obsfrm = 'EARTH_FIXED'
-    target = 'MEX'
-    abcorr = 'CN+S'
-    start  = '2004 MAY 2 TDB'
-    stop   = '2004 MAY 3 TDB'
-
-    #
-    # We model the target shape as a point. We either model the
-    # blocking body's shape as an ellipsoid, or we represent
-    # its shape using actual topographic data. No body-fixed
-    # reference frame is required for the target since its
-    # orientation is not used.
-    #
-    back   = target
-    bshape = 'POINT'
-    bframe = ' '
-    front  = 'MARS'
-    fshape = 'ELLIPSOID'
-    fframe = 'IAU_MARS'
-
-    #
-    # The occultation type should be set to 'ANY' for a point
-    # target.
-    #
-    occtyp = 'any'
-
-    #
-    # in the latitudinal coordinate system, where the reference
-    # frame is topocentric and is centered at the viewing location.
-    #
-    crdsys = 'LATITUDINAL'
-    coord  = 'LATITUDE'
-    relate = '>'
-    refval = 0.0
-
-    #
-    # The adjustment value only applies to absolute extrema
-    # searches; simply give it an initial value of zero
-    # for this inequality search.
-    #
-    adjust = 0.0
-
-    #
-    # stepsz is the step size, measured in seconds, used to search
-    # for times bracketing a state transition. Since we don't expect
-    # any events of interest to be shorter than five minutes, and
-    # since the separation between events is well over 5 minutes,
-    # we'll use this value as our step size. Units are seconds.
-    #
-    stepsz = 300.0
-
-    #
-    # Display a banner for the output report:
-    #
-    print( '\n{:s}\n'.format(
-           'Inputs for target visibility search:' )  )
-
-    print( '   Target                       = '
-           '{:s}'.format( target )  )
-    print( '   Observation surface location = '
-           '{:s}'.format( srfpt  )  )
-    print( '   Observer\'s reference frame   = '
-           '{:s}'.format( obsfrm )  )
-    print( '   Blocking body                = '
-           '{:s}'.format( front  )  )
-    print( '   Blocker\'s reference frame    = '
-           '{:s}'.format( fframe )  )
-    print( '   Aberration correction        = '
-           '{:s}'.format( abcorr )  )
-    print( '   Step size (seconds)          = '
-           '{:f}'.format( stepsz )  )
-
-    #
-    # Convert the start and stop times to ET.
-    #
-    etbeg = spiceypy.str2et( start )
-    etend = spiceypy.str2et( stop  )
-
-    #
-    # Display the search interval start and stop times
-    # using the format shown below.
-    #
-    #    2004 MAY 06 20:15:00.000 (TDB)
-    #
-    btmstr = spiceypy.timout( etbeg, TDBFMT )
-    print( '   Start time                   = '
-           '{:s}'.format(btmstr) )
-
-    etmstr = spiceypy.timout( etend, TDBFMT )
-    print( '   Stop time                    = '
-           '{:s}'.format(etmstr) )
-
-    print( ' ' )
-
-    #
-    # Initialize the "confinement" window with the interval
-    # over which we'll conduct the search.
-    #
-    cnfine = stypes.SPICEDOUBLE_CELL(2)
-    spiceypy.wninsd( etbeg, etend, cnfine )
-
-    #
-    # In the call below, the maximum number of window
-    # intervals gfposc can store internally is set to MAXIVL.
-    # We set the cell size to MAXWIN to achieve this.
-    #
-    riswin = stypes.SPICEDOUBLE_CELL( MAXWIN )
-
-    #
-    # Now search for the time period, within our confinement
-    # window, during which the apparent target has elevation
-    # at least equal to the elevation limit.
-    #
-    spiceypy.gfposc( target, obsfrm, abcorr, srfpt,
-                     crdsys, coord,  relate, refval,
-                     adjust, stepsz, MAXIVL, cnfine, riswin )
-    print(riswin)
-
-    #
-    # Now find the times when the apparent target is above
-    # the elevation limit and is not occulted by the
-    # blocking body (Mars). We'll find the window of times when
-    # the target is above the elevation limit and *is* occulted,
-    # then subtract that window from the view period window
-    # riswin found above.
-    #
-    # For this occultation search, we can use riswin as
-    # the confinement window because we're not interested in
-    # occultations that occur when the target is below the
-    # elevation limit.
-    #
-    # Find occultations within the view period window.
-    #
-    print( 'Searching using ellipsoid target shape model...' )
-
-    eocwin = stypes.SPICEDOUBLE_CELL( MAXWIN )
-    print(eocwin)
-
-    fshape = 'ELLIPSOID'
-
-    spiceypy.gfoclt( occtyp, front,  fshape,  fframe,
-                     back,   bshape, bframe,  abcorr,
-                     srfpt,  stepsz, riswin,  eocwin )
-    print(eocwin)
-    print( '\n{:s}\n'.format('Done.') )
-
-    #
-    # Subtract the occultation window from the view period
-    # window: this yields the time periods when the target
-    # is visible.
-    #
-    # evswin = spiceypy.wndifd( riswin, eocwin )
-
-    #
-    # The function wncard returns the number of intervals
-    # in a SPICE window.
-    #
-    winsiz = spiceypy.wncard( eocwin )
-
-    if winsiz == 0:
-
-        print( 'No events were found.' )
-
-    else:
-        #
-        # Display the visibility time periods.
-        #
-        print( 'Occultation start and stop times of '
-               '{0:s} as seen from {1:s}\n'
-               'using both ellipsoidal and DSK '
-               'target shape models:\n'.format(
-                   target, srfpt )                 )
-
-        for  i  in  range(winsiz):
-            #
-            # Fetch the start and stop times of
-            # the ith interval from the ellipsoid
-            # search result window evswin.
-            #
-            [intbeg, intend] = spiceypy.wnfetd( eocwin, i )
-
-            #
-            # Convert the rise time to TDB calendar strings.
-            # Write the results.
-            #
-            btmstr = spiceypy.timout( intbeg, TDBFMT )
-            etmstr = spiceypy.timout( intend, TDBFMT )
-
-            print( ' sta: ' + str(intbeg) + ', ' + str(intend))
-            print( ' Ell: {:s} : {:s}'.format( btmstr, etmstr ) )
-
-        #
-        # End of result display loop.
-        #
-
-    print( '\n{:s}\n'.format('Done.') )
-    spiceypy.unload( METAKR )
-
-
-    #
-    # Local Parameters
-    #
-    METAKR = './mexMetaK.tm.txt'
-    TDBFMT = 'YYYY MON DD HR:MN:SC.### TDB ::TDB'
-    MAXIVL = 1000
-    MAXWIN = 2 * MAXIVL
-
-    #
-    # Load the meta-kernel.
-    #
-    spiceypy.furnsh( METAKR )
     
     #
     # input
@@ -858,8 +635,7 @@ def visibl_oclt():
             btmstr = spiceypy.timout( intbeg, TDBFMT )
             etmstr = spiceypy.timout( intend, TDBFMT )
 
-            print( ' sta: ' + str(intbeg) + ', ' + str(intend))
-            print( ' Ell: {:s} : {:s}'.format( btmstr, etmstr ) )
+            print( ' Ell: {:s} : {:s}\n'.format( btmstr, etmstr ) )
     
     # #
     # # Umbra
@@ -898,8 +674,7 @@ def visibl_oclt():
     #         btmstr = spiceypy.timout( intbeg, TDBFMT )
     #         etmstr = spiceypy.timout( intend, TDBFMT )
 
-    #         print( ' sta: ' + str(intbeg) + ', ' + str(intend))
-    #         print( ' Ell: {:s} : {:s}'.format( btmstr, etmstr ) )
+    #         print( ' Ell: {:s} : {:s}\n'.format( btmstr, etmstr ) )
     
     print( '\n{:s}\n'.format('Done.') )
     spiceypy.unload( METAKR )
@@ -1007,7 +782,11 @@ def geometry_find():
 
 
 if __name__ == '__main__':
+    # DSS-14から見たMEX可視
     viewpr()
-    # visibl()
-    # visibl_oclt()
-    # geometry_find()
+    # DSS-14から見た火星による掩蔽を考慮したMEX可視
+    visibl()
+    # 日陰
+    visibl_oclt()
+    # geometry finder
+    geometry_find()
