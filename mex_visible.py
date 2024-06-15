@@ -482,7 +482,7 @@ def visibl():
     spiceypy.unload( METAKR )
 
 
-def visibl_oclt():
+def shade():
     #
     # Local Parameters
     #
@@ -499,11 +499,6 @@ def visibl_oclt():
     #
     # input
     #
-    target = 'MEX'
-    obsrvr = 'SUN'
-    obsfrm = 'IAU_SUN'
-    abcorr = 'CN+S'
-    
     front  = 'MARS'
     fshape = 'ELLIPSOID'
     fframe = 'IAU_MARS'
@@ -511,19 +506,14 @@ def visibl_oclt():
     back   = ilusrc
     bshape = 'ELLIPSOID'
     bframe = 'IAU_SUN'
-    obssat = target
+    abcorr = 'CN+S'
+    obssat = 'MEX'
+    stepsz = 300.0
     umbra  = 'FULL'
     penumb = 'ANY'
     
     start  = '2004 MAY 2 TDB'
     stop   = '2004 MAY 6 TDB'
-    
-    crdsys = 'LATITUDINAL'
-    coord  = 'LATITUDE'
-    relate = '>'
-    refval = 0.0
-    adjust = 0.0
-    stepsz = 300.0
     
     #
     # Convert the start and stop times to ET.
@@ -539,73 +529,15 @@ def visibl_oclt():
     print( ' ' )
     
     #
-    # MEX - SUN
-    #
-    cnfine = stypes.SPICEDOUBLE_CELL(2)
-    spiceypy.wninsd( etbeg, etend, cnfine )
-    riswin = stypes.SPICEDOUBLE_CELL( MAXWIN )
-    spiceypy.gfposc( target, 'IAU_EARTH', abcorr, 'EARTH',
-                     crdsys, coord,  relate, refval,
-                     adjust, stepsz, MAXIVL, cnfine, riswin )
-    winsiz = spiceypy.wncard( riswin )
-
-    if winsiz == 0:
-        print( 'No events were found.' )
-    else:
-        #
-        # Display the visibility time periods.
-        #
-        print( 'Visibility times of {0:s} '
-                'as seen from {1:s}:\n'.format(target, ilusrc ) )
-        for  i  in  range(winsiz):
-            #
-            # Fetch the start and stop times of
-            # the ith interval from the search result
-            # window riswin.
-            #
-            [intbeg, intend] = spiceypy.wnfetd( riswin, i )
-
-            #
-            # Convert the rise time to a TDB calendar string.
-            #
-            timstr = spiceypy.timout( intbeg, TDBFMT )
-
-            #
-            # Write the string to standard output.
-            #
-            if  i  ==  0:
-                print( 'Visibility or window start time:'
-                        '  {:s}'.format( timstr )          )
-            else:
-                print( 'Visibility start time:          '
-                        '  {:s}'.format( timstr )          )
-
-            #
-            # Convert the set time to a TDB calendar string.
-            #
-            timstr = spiceypy.timout( intend, TDBFMT )
-
-            #
-            # Write the string to standard output.
-            #
-            if  i  ==  (winsiz-1):
-                print( 'Visibility or window stop time: '
-                        '  {:s}'.format( timstr )          )
-            else:
-                print( 'Visibility stop time:           '
-                        '  {:s}'.format( timstr )          )
-                print( ' ' )
-    print( ' ' )
-    print( 'riswinをうまくつくれないので、地球可視で作り出した' )
-    
-    #
-    # Penumbra
+    # Penumbra or Umbra
     #
     print( 'Searching using ellipsoid target shape model...' )
+    cnfine = stypes.SPICEDOUBLE_CELL(2)
+    spiceypy.wninsd( etbeg, etend, cnfine )
     eocwin = stypes.SPICEDOUBLE_CELL( MAXWIN )
     spiceypy.gfoclt( penumb, front,  fshape,  fframe,
-                      back,   bshape, bframe,  abcorr,
-                      obssat, stepsz, riswin,  eocwin )
+                     back,   bshape, bframe,  abcorr,
+                     obssat, stepsz, cnfine,  eocwin )
     print( '\n{:s}\n'.format('Done.') )
     winsiz = spiceypy.wncard( eocwin )
 
@@ -617,8 +549,8 @@ def visibl_oclt():
         #
         print( 'Penumbra start and stop times of '
                 '{0:s} as seen from {1:s}\n'
-                'using both ellipsoidal and DSK '
-                'target shape models:\n'.format(target, ilusrc ))
+                'using ellipsoidal '
+                'target shape models:\n'.format( obssat, ilusrc ))
 
         for  i  in  range(winsiz):
             #
@@ -635,46 +567,7 @@ def visibl_oclt():
             btmstr = spiceypy.timout( intbeg, TDBFMT )
             etmstr = spiceypy.timout( intend, TDBFMT )
 
-            print( ' Ell: {:s} : {:s}\n'.format( btmstr, etmstr ) )
-    
-    # #
-    # # Umbra
-    # #
-    # print( 'Searching using ellipsoid target shape model...' )
-    # eocwin = stypes.SPICEDOUBLE_CELL( MAXWIN )
-    # spiceypy.gfoclt( umbra , front,  fshape,  fframe,
-    #                   back,   bshape, bframe,  abcorr,
-    #                   obssat, stepsz, riswin,  eocwin )
-    # print( '\n{:s}\n'.format('Done.') )
-    # winsiz = spiceypy.wncard( eocwin )
-
-    # if winsiz == 0:
-    #     print( 'No events were found.' )
-    # else:
-    #     #
-    #     # Display the visibility time periods.
-    #     #
-    #     print( 'Umbra start and stop times of '
-    #             '{0:s} as seen from {1:s}\n'
-    #             'using both ellipsoidal and DSK '
-    #             'target shape models:\n'.format(target, ilusrc ))
-
-    #     for  i  in  range(winsiz):
-    #         #
-    #         # Fetch the start and stop times of
-    #         # the ith interval from the ellipsoid
-    #         # search result window evswin.
-    #         #
-    #         [intbeg, intend] = spiceypy.wnfetd( eocwin, i )
-
-    #         #
-    #         # Convert the rise time to TDB calendar strings.
-    #         # Write the results.
-    #         #
-    #         btmstr = spiceypy.timout( intbeg, TDBFMT )
-    #         etmstr = spiceypy.timout( intend, TDBFMT )
-
-    #         print( ' Ell: {:s} : {:s}\n'.format( btmstr, etmstr ) )
+            print( ' Ell: {:s} : {:s}'.format( btmstr, etmstr ) )
     
     print( '\n{:s}\n'.format('Done.') )
     spiceypy.unload( METAKR )
@@ -787,6 +680,6 @@ if __name__ == '__main__':
     # DSS-14から見た火星による掩蔽を考慮したMEX可視
     visibl()
     # 日陰
-    visibl_oclt()
+    shade()
     # geometry finder
     geometry_find()
